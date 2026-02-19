@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Décompte – Vacances Asie</title>
+
+<style>
+  :root{
+    --text: #ffffff;
+    --muted: #e2e2e2;
+    --track: rgba(255,255,255,0.22);
+    --accent: #6ea8fe;
+    --accent-2: #a0ffcf;
+    --glass: rgba(0,0,0,0.45);
+    --glow: rgba(255, 230, 140, 0.55);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body{
+    margin:0;
+    position:relative;
+    display:flex;
+    align-items:center;              /* centré vertical */
+    justify-content:center;          /* centré horizontal */
+    color:var(--text);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+    /* Fond Laos (Unsplash – libre) */
+    background-image: url("https://images.unsplash.com/photo-1567979924888-5c38e42527a4?auto=format&fit=crop&w=1920&q=80");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    overflow:hidden;
+  }
+
+  /* Overlay lever de soleil (déclenché en fin de décompte) */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:0;
+    opacity:0;
+    mix-blend-mode: soft-light;
+    background: linear-gradient(180deg, #0b1530 0%, #0b1530 100%);
+  }
+  body.sunrise::before{
+    animation: sunrise 15s linear forwards;
+  }
+  @keyframes sunrise{
+    0%   { opacity:.75;
+           background: radial-gradient(120% 100% at 50% 120%, rgba(255,140,0,0) 0%, rgba(0,0,0,.65) 80%),
+                       linear-gradient(180deg, #0b1530 0%, #15234c 100%);
+           filter: saturate(.9) brightness(.75); }
+    40%  { opacity:.65;
+           background: radial-gradient(120% 100% at 50% 120%, rgba(255,170,60,.45) 0%, rgba(255,170,60,.15) 45%, rgba(0,0,0,.45) 80%),
+                       linear-gradient(180deg, #15234c 0%, #3a2a20 100%);
+           filter: saturate(1.1) brightness(.95); }
+    100% { opacity:0;
+           background: radial-gradient(120% 100% at 50% 120%, rgba(255,210,120,0) 0%, rgba(0,0,0,0) 100%),
+                       linear-gradient(180deg, #2d2d2d 0%, #2d2d2d 100%);
+           filter:none; }
+  }
+
+  /* Avion animé (bas -> haut en diagonale, style décollage) */
+  .plane-fly{
+    position:fixed;
+    z-index:3;
+    font-size: 64px;                 /* taille de l’emoji ✈️ */
+    opacity: .9;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.35));
+    pointer-events: none;
+    animation: fly-diagonal 18s linear infinite;
+    animation-delay: 0s;           /* petit délai avant le 1er passage */
+  }
+  @keyframes fly-diagonal{
+    /* départ hors écran en bas-gauche → montée vers le haut-droit */
+    0%   { transform: translate(-20vw, 30vh) rotate(-12deg) scale(1);   opacity: 0; }
+    8%   { opacity: .95; }
+    50%  { transform: translate(40vw, -5vh) rotate(-12deg) scale(1.05); opacity: .95; }
+    92%  { opacity: .9; }
+    100% { transform: translate(120vw, -40vh) rotate(-12deg) scale(1.08); opacity: 0; }
+  }
+
+  .card{
+    position:relative;
+    z-index:1;                        /* au-dessus de l’overlay, sous l’avion */
+    width:min(92vw, 620px);
+    padding:22px 22px 26px;
+    border-radius:24px;
+    background: var(--glass);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    text-align:center;
+  }
+
+  /* Carte d’embarquement (header minimal) + clignotement doux */
+  .boarding{
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap:12px;
+    align-items:center;
+    padding:12px 14px;
+    border-radius:16px;
+    background: rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.15);
+    margin-bottom:14px;
+
+    /* Effet “pulse” doux (breathing) */
+    animation: pulse-soft 4.5s ease-in-out infinite;
+  }
+  @keyframes pulse-soft{
+    0%, 100% { box-shadow: 0 0 0 rgba(255,255,255,0);
+               transform: translateZ(0); }
+    50%      { box-shadow: 0 0 28px rgba(255,255,255,0.25), 0 0 8px rgba(255,255,255,0.18) inset;
+               transform: translateZ(0); }
+  }
+
+  .bp-left, .bp-right{ text-align:left; font-size:.9rem; color:var(--muted); }
+  .bp-right{ text-align:right; }
+  .bp-center{
+    font-weight:700; letter-spacing:.4px;
+    display:flex; align-items:center; gap:10px; justify-content:center;
+    white-space:nowrap;
+  }
+  .plane{ font-size:1.1rem; line-height:1; }
+  .barcode{
+    height:20px; width:120px; justify-self:end;
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,.85) 0 2px,
+      rgba(0,0,0,.85) 2px 4px
+    );
+    border-radius:3px;
+    opacity:.85;
+  }
+
+  .title{
+    margin:6px 0 6px 0;
+    font-size: clamp(1.3rem, 3.2vw, 1.9rem);
+    font-weight:800;
+    text-shadow: 0 1px 2px rgba(0,0,0,.45);
+  }
+  .subtitle{
+    margin:0 0 18px 0;
+    color:var(--muted);
+    font-size:.98rem;
+  }
+
+  .ring-wrap{
+    display:grid;
+    place-items:center;
+    margin-top:6px;
+  }
+
+  .ring{
+    position:relative;
+    width:min(70vw, 320px);
+    aspect-ratio:1 / 1;
+    border-radius:50%;
+    display:grid;
+    place-items:center;
+    background: conic-gradient(var(--accent) 0deg, var(--track) 0deg);
+    transition: background .25s linear;
+  }
+
+  /* Centre visuel parfait du texte à l’intérieur du donut */
+  .ring::before{
+    content:"";
+    position:absolute;
+    inset:20px;                       /* épaisseur du donut + centrage */
+    border-radius:50%;
+    background: rgba(0,0,0,0.45);
+  }
+
+  /* Halo / lumières festives en orbite */
+  .orbit{
+    position:absolute; inset:-8px;
+    pointer-events:none;
+    animation: orbit-rotate 24s linear infinite;
+  }
+  @keyframes orbit-rotate{
+    to { transform: rotate(360deg); }
+  }
+  .dot{
+    position:absolute;
+    width:8px; height:8px; border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, #fff, #ffd26a 60%, transparent 62%);
+    opacity:.35;
+    filter: blur(.2px);
+    animation: twinkle 2.2s infinite ease-in-out;
+    box-shadow: 0 0 8px var(--glow);
+  }
+  @keyframes twinkle{
+    0%,100%{ opacity:.25; transform:scale(.9);}
+    50%    { opacity:1;   transform:scale(1.15);}
+  }
+
+  .time{
+    position:relative;
+    top: 8px;                         /* descend légèrement le texte */
+    z-index:2;
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(1.6rem, 4.2vw, 2.4rem);
+    font-weight:800;
+    letter-spacing:.6px;
+  }
+
+  .labels{
+    margin-top:8px;                   /* rapproche visuellement du texte */
+    display:flex; gap:12px; justify-content:center;
+    color:var(--muted); font-size:.9rem;
+  }
+  .labels span{
+    background: rgba(255,255,255,.15);
+    padding:4px 8px; border-radius:999px;
+  }
+
+  .done{
+    margin-top:16px;
+    font-size:1.25rem;
+    color:#b6ffd9;
+  }
+
+  /* Responsif */
+  @media (max-width: 420px){
+    .barcode{ display:none; }
+    .boarding{ grid-template-columns: 1fr 1fr; }
+    .bp-right{ display:none; }
+  }
+</style>
+</head>
+
+<body>
+  <!-- ✈️ Avion qui traverse l’écran (bas-gauche -> haut-droit) -->
+  <div class="plane-fly" aria-hidden="true">✈️✈️✈️✈️✈️✈️</div>
+
+  <main class="card" role="main" aria-live="polite">
+    <!-- 🎟️ Carte d’embarquement (clignotement doux) -->
+    <div class="boarding" aria-label="Carte d’embarquement">
+      <div class="bp-left">
+        <div style="opacity:.9;font-weight:700;">GK‑LA‑VN 2026</div>
+        <div style="font-size:.85rem;">Grèce → Laos → Vietnam</div>
+      </div>
+
+      <div class="bp-center">
+        <span class="plane">✈️</span>
+        <span>Boarding Pass</span>
+      </div>
+
+      <div class="bp-right">
+        <div style="opacity:.9;">Gate T1</div>
+        <div style="font-size:.85rem;">Zone 1 & 2 • Seat Bae</div>
+      </div>
+
+      <div class="barcode" aria-hidden="true"></div>
+    </div>
+
+    <h1 class="title">Départ pour l’Asie ✈️</h1>
+    <p class="subtitle">Décollage : <strong>01/03/2026 à 07:00</strong> (heure de Paris)</p>
+
+    <section class="ring-wrap">
+      <div class="ring" id="ring">
+        <!-- Halo de lumières -->
+        <div class="orbit" id="orbit"></div>
+
+        <div class="time" id="time">-- j --:--:--</div>
+
+        <div class="labels" aria-hidden="true">
+          <span>jours</span><span>heures</span><span>min</span><span>sec</span>
+        </div>
+      </div>
+
+      <div class="done" id="done" hidden>C’est maintenant ! 🎉</div>
+    </section>
+  </main>
+
+<script>
+(function(){
+  // Cible : 01/03/2026 07:00 (Europe/Paris) = 06:00 UTC
+  const targetUTC = Date.UTC(2026, 2, 1, 6, 0, 0);
+
+  const ring   = document.getElementById('ring');
+  const orbit  = document.getElementById('orbit');
+  const timeEl = document.getElementById('time');
+  const doneEl = document.getElementById('done');
+
+  // Points lumineux autour du cercle
+  function createDots(count = 16){
+    const size = ring.clientWidth;
+    const cx = size / 2;
+    const cy = size / 2;
+    const r  = size / 2 + 6;
+
+    orbit.innerHTML = "";
+    for(let i=0; i<count; i++){
+      const a = (i / count) * Math.PI * 2;
+      const x = cx + r * Math.cos(a);
+      const y = cy + r * Math.sin(a);
+
+      const d = document.createElement('div');
+      d.className = 'dot';
+      d.style.left = x + "px";
+      d.style.top  = y + "px";
+      d.style.animationDelay = (Math.random()*1.2).toFixed(2) + "s";
+      orbit.appendChild(d);
+    }
+  }
+  const ro = new ResizeObserver(() => createDots());
+  ro.observe(ring);
+  createDots();
+
+  const initialRemaining = Math.max(0, targetUTC - Date.now());
+  function pad(n){ return n.toString().padStart(2,'0'); }
+
+  function render(remainMs, totalMs){
+    const s = Math.max(0, Math.floor(remainMs/1000));
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+
+    timeEl.textContent = `${d} j  ${pad(h)}:${pad(m)}:${pad(sec)}`;
+
+    // Remplissage du ring (de 100% -> 0%)
+    const percent = totalMs > 0 ? remainMs / totalMs : 0;
+    ring.style.background =
+      `conic-gradient(var(--accent) ${percent*360}deg, var(--track) 0deg)`;
+  }
+
+  let sunriseStarted = false;
+
+  function tick(){
+    const now = Date.now();
+    const remain = Math.max(0, targetUTC - now);
+
+    render(remain, initialRemaining);
+
+    // Déclenche la transition lever de soleil sur les 15 dernières secondes
+    if (!sunriseStarted && remain <= 15000 && remain > 0){
+      document.body.classList.add('sunrise');
+      sunriseStarted = true;
+    }
+
+    if (remain <= 0){
+      doneEl.hidden = false;
+      ring.style.background = `conic-gradient(var(--accent-2) 360deg, var(--track) 0deg)`;
+      clearInterval(timer);
+    }
+  }
+
+  tick();
+  const timer = setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
